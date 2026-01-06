@@ -130,8 +130,12 @@ def replace_id(url, form):
 def prevent_open_redirect(url, host=None):
     # Prevent an attacker from adding an arbitrary url after the
     # _next variable in the request.
-    host = host or current.request.env.http_host
-    default_scheme = "https" if current.request.is_https else "http"
+    if hasattr(current, "request"):
+        host = host or current.request.env.http_host
+        default_scheme = "https" if current.request.is_https else "http"
+    else:
+        host = "localhost"
+        default_scheme = "http"
     original = url
 
     if url is not None:
@@ -146,8 +150,10 @@ def prevent_open_redirect(url, host=None):
 
     if url.startswith("//"):
         url = default_scheme + ":" + url
-    if url.startswith("://"):
+    elif url.startswith("://"):
         url = default_scheme + url
+    elif url.startswith("/") and not url.split("/")[1].isalnum():
+        return None
 
     try:
         parsed = urlparse.urlparse(url)
@@ -3488,7 +3494,7 @@ class Auth(AuthAPI):
                     and self.settings.mailer.send(
                         to=form.vars.email,
                         subject=self.messages.verify_email_subject,
-                        message=self.messages.verify_email % d,
+                        message=str(self.messages.verify_email % d),
                     )
                 ):
                     self.db.rollback()
@@ -3630,7 +3636,7 @@ class Auth(AuthAPI):
             self.settings.mailer.send(
                 to=form.vars.email,
                 subject=self.messages.retrieve_username_subject,
-                message=self.messages.retrieve_username % dict(username=username),
+                message=str(self.messages.retrieve_username % dict(username=username)),
             )
             session.flash = self.messages.email_sent
             for user in users:
@@ -3727,7 +3733,7 @@ class Auth(AuthAPI):
             if self.settings.mailer and self.settings.mailer.send(
                 to=form.vars.email,
                 subject=self.messages.retrieve_password_subject,
-                message=self.messages.retrieve_password % dict(password=password),
+                message=str(self.messages.retrieve_password % dict(password=password)),
             ):
                 session.flash = self.messages.email_sent
             else:
@@ -3844,7 +3850,7 @@ class Auth(AuthAPI):
             dict(key=reset_password_key, link=link, site=current.request.env.http_host)
         )
         if self.settings.mailer and self.settings.mailer.send(
-            to=user.email, subject=subject % d, message=body % d
+            to=user.email, subject=subject % d, message=str(body % d)
         ):
             user.update_record(reset_password_key=reset_password_key)
             return True
@@ -4136,7 +4142,7 @@ class Auth(AuthAPI):
         if self.settings.mailer and self.settings.mailer.send(
             to=user.email,
             subject=self.messages.reset_password_subject,
-            message=self.messages.reset_password % d,
+            message=str(self.messages.reset_password % d),
         ):
             user.update_record(reset_password_key=reset_password_key)
             return True
