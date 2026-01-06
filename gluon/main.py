@@ -82,6 +82,11 @@ logger = logging.getLogger("web2py")
 exists = os.path.exists
 pjoin = os.path.join
 
+# monkey patch pydal
+import pydal
+pydal.get_default_represent = lambda value: value
+# end monkey patch
+
 from pydal.base import BaseAdapter
 
 from gluon import newcron
@@ -645,7 +650,7 @@ def appfactory(
         raise BaseException("Deprecated API")
     if profiler_dir:
         profiler_dir = abspath(profiler_dir)
-        logger.warn("profiler is on. will use dir %s", profiler_dir)
+        logger.warning("profiler is on. will use dir %s", profiler_dir)
         if not os.path.isdir(profiler_dir):
             try:
                 os.makedirs(profiler_dir)
